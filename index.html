@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Snap Crack</title>
+		<style>
+			canvas {
+				margin: 0 auto;
+				display: block;
+				border: 1px solid #c9c9c9;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="snap-crack" width="640" height="960"></canvas>
+		<script>
+			// Main game object.
+			var snap = {
+				// Brick.
+				Brick: function (e) {
+					this.image = new Image();
+					this.image.src = 'img/brick.svg';
+					this.width = 100;
+					this.height = 143;
+					this.x = (canvas.width - this.width) / 2;
+
+					this.flipping = false;
+					this.flipFrames = [];
+					this.flipIndex = 0;
+					this.flipTicks = 0;
+					this.ticksPerFrame = 6;
+				},
+
+				// Coins.
+				Coin: function () {},
+
+				// Score.
+				Score: function () {},
+
+				// Controls.
+				controls: function (e) {
+					switch (e.keyCode) {
+						case 32:
+							snap.player.flipping = true;
+							break;
+					}
+				},
+
+				// Game settings.
+				fps: 40,
+
+				// Utility.
+
+				// Active objects.
+				player: null,
+
+				// Game setup.
+				setup: function () {
+					this.player = new snap.Brick();
+					// Populate player flip frames.
+					for (var i = 0; i < 8; i++) {
+						this.player.flipFrames[i] = i * 100;
+					}
+
+					// Assign event listeners.
+					window.addEventListener('keydown', this.controls);
+				},
+
+				// Game loop.
+				init: function (fps) {
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+					this.player.draw();
+
+					setTimeout(function () {
+						snap.init();
+					}, 1000 / fps);
+				}
+			};
+
+			snap.Brick.prototype = {
+				constructor: snap.Brick,
+				// Unless spacebar pressed, default to falling image.
+				draw: function () {
+					// Draw function handles both player states.
+					// Depending on 'flipping' flag, it serves different images.
+					if (!this.flipping) {
+						this.fall();
+					} else {
+						this.flip();
+					}
+
+					return this;
+				},
+				fall: function () {
+					ctx.drawImage(this.image, 0, 0, 100, 142, this.x, 100, 100, 142);
+				},
+				flip: function () {
+					if (this.flipIndex > 7) {
+						ctx.drawImage(this.image, 0, 0, 100, 142, this.x, 100, 100, 142);
+						this.flipping = false;
+						this.flipIndex = 0;
+					} else {
+						this.flipTicks += 1;
+
+						if (this.flipTicks > this.ticksPerFrame) {
+							this.flipTicks = 0;
+							this.flipIndex += 1;
+						}
+
+						ctx.drawImage(this.image,
+							this.flipFrames[this.flipIndex],
+							0, 100, 142, this.x, 100, 100, 142);
+					}
+					console.log(this.flipIndex);
+				}
+			}
+
+			// Start the game loop.
+			var canvas = document.getElementById('snap-crack');
+			ctx = canvas.getContext('2d');
+
+			snap.setup();
+			snap.init(snap.fps);
+
+		</script>
+	</body>
+</html>
