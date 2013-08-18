@@ -38,6 +38,8 @@
 					this.height = 143;
 					this.x = (canvas.width - this.width) / 2;
 					this.xRate = 5;
+					this.y = 100;
+					this.yRate = 10;
 
 					this.flipping = false;
 					this.flipFrames = [];
@@ -47,13 +49,31 @@
 
 					this.moveLeft = false;
 					this.moveRight = false;
+
+					this.deadFrame = null;
+
+					this.jitter = false;
 				},
 
 				// Coins.
 				Coin: function () {},
 
+				// Floor.
+				Floor: function () {
+					this.width = 670;
+					this.height = 185;
+					this.x = -15;
+					this.y = 960;
+					this.yRate = 5;
+				},
+
 				// Score.
 				Score: function () {},
+
+				// Timer.
+				Timer: function () {
+					this.limit = snap.time;
+				},
 
 				// Controls.
 				controls: function (e) {
@@ -85,25 +105,39 @@
 					}
 				},
 
-				// Listener flags.
+				// Global helpers.
 				spaceHeld: false,
 
 				// Game settings.
 				fps: 40,
-				timer: 10000,
+				time: 10000,
 
 				// Utility.
 
 				// Active objects.
 				player: null,
+				floor: null,
+				timer: null,
 
 				// Game setup.
 				setup: function () {
+					// Clear all game objects.
+					this.player = null;
+					this.floor = null;
+					this.timer = null;
+
+					// Generate new player.
 					this.player = new snap.Brick();
 					// Populate player flip frames.
 					for (var i = 0; i < 8; i++) {
 						this.player.flipFrames[i] = i * 100;
 					}
+
+					// Generate a timer.
+					this.timer = new snap.Timer();
+
+					// Generate floor.
+					this.floor = new snap.Floor();
 
 					// Assign event listeners.
 					window.addEventListener('keydown', this.controls);
@@ -114,10 +148,50 @@
 				init: function (fps) {
 					ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+					// Main game loop tied to timer.
+					if (this.timer.get() > 0) {
+						// When we get close to time out, activate the floor.
+						if (this.timer.get() < 0.5) {
+							if (this.floor.y > 805) {
+								this.floor.y -= this.floor.yRate;
+							}
+							this.floor.draw();
+							// And activate the end sequence (player actually falls).
+							if (this.player.y < 715) {
+								this.player.y += this.player.yRate;
+							} else {
+								this.player.xRate = 0;
+							}
+						}
+
+						// Draw the player.
+						this.player.draw();
+
+						setTimeout(function () {
+							snap.init();
+						}, 1000 / fps);
+					} else {
+						this.player.deadFrame = this.player.flipIndex;
+						this.endit(fps);
+
+						// Remove event listeners.
+						window.removeEventListener('keydown', this.controls);
+						window.removeEventListener('keyup', this.controls);
+					}
+				},
+
+				// Game end.
+				endit: function (fps) {
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+					// Draw the floor.
+					this.floor.draw();
+
+					// Draw the player.
 					this.player.draw();
 
 					setTimeout(function () {
-						snap.init();
+						snap.endit();
 					}, 1000 / fps);
 				}
 			};
@@ -126,35 +200,41 @@
 				constructor: snap.Brick,
 				// Unless spacebar pressed, default to falling image.
 				draw: function () {
-					// Draw function handles both player states.
-					// Depending on 'flipping' flag, it serves different images.
-					if (!this.flipping) {
-						this.fall();
+					// Draw function handles all player states.
+					// If the main game loop has ended, draw the end frame only.
+					if (this.deadFrame !== null) {
+						ctx.drawImage(this.image, this.flipFrames[this.deadFrame], 
+							0, 100, 142, this.x, this.y, 100, 142);
 					} else {
-						this.flip();
-					}
+						// Depending on 'flipping' flag, serves different images.
+						if (!this.flipping) {
+							this.fall();
+						} else {
+							this.flip();
+						}
 
-					// Listen for left/right movement flags.
-					if (this.moveLeft) {
-						this.x -= this.xRate;
-					} else if (this.moveRight) {
-						this.x += this.xRate;
-					}
-					// If x-coord moves out of bounds, set x to bound limits.
-					if (this.x <= 0) {
-						this.x = 0;
-					} else if (this.x >= 540) {
-						this.x = 540;
+						// Listen for left/right movement flags.
+						if (this.moveLeft) {
+							this.x -= this.xRate;
+						} else if (this.moveRight) {
+							this.x += this.xRate;
+						}
+						// If x-coord moves out of bounds, set x to bound limits.
+						if (this.x <= 0) {
+							this.x = 0;
+						} else if (this.x >= 540) {
+							this.x = 540;
+						}
 					}
 
 					return this;
 				},
 				fall: function () {
-					ctx.drawImage(this.image, 0, 0, 100, 142, this.x, 100, 100, 142);
+					ctx.drawImage(this.image, 0, 0, 100, 142, this.x, this.y, 100, 142);
 				},
 				flip: function () {
 					if (this.flipIndex > 7) {
-						ctx.drawImage(this.image, 0, 0, 100, 142, this.x, 100, 100, 142);
+						ctx.drawImage(this.image, 0, 0, 100, 142, this.x, this.y, 100, 142);
 						this.flipping = false;
 						this.flipIndex = 0;
 					} else {
@@ -167,17 +247,50 @@
 
 						ctx.drawImage(this.image,
 							this.flipFrames[this.flipIndex],
-							0, 100, 142, this.x, 100, 100, 142);
+							0, 100, 142, this.x, this.y, 100, 142);
 					}
 				}
-			}
+			};
+
+			snap.Floor.prototype = {
+				constructor: snap.Floor,
+				draw: function () {
+					ctx.fillStyle = '#ccc';
+					ctx.fillRect(this.x, this.y, this.width, this.height);
+				}
+			};
+
+			snap.Timer.prototype = {
+				constructor: snap.Timer,
+				init: function () {
+					if (snap.time > 0) {
+						setTimeout(function () {
+							snap.time -= 100;
+							snap.timer.init();
+						}, 100);
+					}
+				},
+				get: function () {
+					return snap.time / 1000;
+				}
+			};
 
 			// Start the game loop.
 			var canvas = document.getElementById('snap-crack');
 			ctx = canvas.getContext('2d');
 
 			snap.setup();
+			snap.timer.init();
 			snap.init(snap.fps);
+
+			/*
+				------------
+				RANDOM IDEAS
+				------------
+
+				- Randomly generate a timer limit every round.
+
+			*/
 
 		</script>
 	</body>
