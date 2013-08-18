@@ -3,6 +3,19 @@
 	<head>
 		<title>Snap Crack</title>
 		<style>
+			#wrap {
+				width: 642px;
+				height: 960px;
+				margin : 0 auto;
+				background: #dddddd;
+				background: -moz-linear-gradient(top,  #dddddd 0%, #ffffff 100%);
+				background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#dddddd), color-stop(100%,#ffffff));
+				background: -webkit-linear-gradient(top,  #dddddd 0%,#ffffff 100%);
+				background: -o-linear-gradient(top,  #dddddd 0%,#ffffff 100%);
+				background: -ms-linear-gradient(top,  #dddddd 0%,#ffffff 100%);
+				background: linear-gradient(to bottom,  #dddddd 0%,#ffffff 100%);
+				filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#dddddd', endColorstr='#ffffff',GradientType=0 );
+			}
 			canvas {
 				margin: 0 auto;
 				display: block;
@@ -11,7 +24,9 @@
 		</style>
 	</head>
 	<body>
-		<canvas id="snap-crack" width="640" height="960"></canvas>
+		<div id="wrap">
+			<canvas id="snap-crack" width="640" height="960"></canvas>
+		</div>
 		<script>
 			// Main game object.
 			var snap = {
@@ -22,12 +37,16 @@
 					this.width = 100;
 					this.height = 143;
 					this.x = (canvas.width - this.width) / 2;
+					this.xRate = 5;
 
 					this.flipping = false;
 					this.flipFrames = [];
 					this.flipIndex = 0;
 					this.flipTicks = 0;
 					this.ticksPerFrame = 6;
+
+					this.moveLeft = false;
+					this.moveRight = false;
 				},
 
 				// Coins.
@@ -39,14 +58,39 @@
 				// Controls.
 				controls: function (e) {
 					switch (e.keyCode) {
+						// Space bar.
 						case 32:
-							snap.player.flipping = true;
+							if (!snap.spaceHeld) {
+								snap.player.flipping = true;
+								snap.spaceHeld = true;
+							}
+							if (e.type === 'keyup') {
+								snap.spaceHeld = false;
+							}
+							break;
+						// Left arrow.
+						case 37:
+							snap.player.moveLeft = true;
+							if (e.type === 'keyup') {
+								snap.player.moveLeft = false;
+							}
+							break;
+						// Right arrow.
+						case 39:
+							snap.player.moveRight = true;
+							if (e.type === 'keyup') {
+								snap.player.moveRight = false;
+							}
 							break;
 					}
 				},
 
+				// Listener flags.
+				spaceHeld: false,
+
 				// Game settings.
 				fps: 40,
+				timer: 10000,
 
 				// Utility.
 
@@ -63,6 +107,7 @@
 
 					// Assign event listeners.
 					window.addEventListener('keydown', this.controls);
+					window.addEventListener('keyup', this.controls);
 				},
 
 				// Game loop.
@@ -89,6 +134,19 @@
 						this.flip();
 					}
 
+					// Listen for left/right movement flags.
+					if (this.moveLeft) {
+						this.x -= this.xRate;
+					} else if (this.moveRight) {
+						this.x += this.xRate;
+					}
+					// If x-coord moves out of bounds, set x to bound limits.
+					if (this.x <= 0) {
+						this.x = 0;
+					} else if (this.x >= 540) {
+						this.x = 540;
+					}
+
 					return this;
 				},
 				fall: function () {
@@ -111,7 +169,6 @@
 							this.flipFrames[this.flipIndex],
 							0, 100, 142, this.x, 100, 100, 142);
 					}
-					console.log(this.flipIndex);
 				}
 			}
 
