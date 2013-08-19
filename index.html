@@ -59,11 +59,11 @@
 				Coin: function () {},
 
 				// Clouds.
-				Cloud: function (x, y, w) {
-					this.width = w;
+				Cloud: function () {
+					this.width = snap.randNum(250, 350);
 					this.height = 100;
-					this.x = x;
-					this.y = y;
+					this.x = -150 + snap.altSign(snap.randNum(0, 640));
+					this.y = 100 + (snap.altSign(snap.randNum(0, 1) * 50));	// Change this later to be self updating.
 					this.yRate = 10;
 				},
 
@@ -122,6 +122,7 @@
 				// Global helpers.
 				startScreen: true,
 				spaceHeld: false,
+				lastSign: false,	// Helper for altSign utility function.
 
 				// Game settings.
 				fps: 40,
@@ -136,7 +137,6 @@
 						return result;
 					}
 				},
-
 				randSign: function (value) {
 					if (Math.round(Math.random()) === 0) {
 						return -value;
@@ -144,7 +144,15 @@
 						return value;
 					}
 				},
-
+				altSign: function (value) {
+					if (this.lastSign) {
+						this.lastSign = false;
+						return -value;
+					} else {
+						this.lastSign = true;
+						return value;
+					}
+				},
 				drawText: function (object) {
 					// This function accepts an object with settings:
 					// strings: font, fill, text, align, x, y
@@ -164,15 +172,15 @@
 
 				// Active objects.
 				player: null,
-				clouds: null,
 				floor: null,
 				timer: null,
+
+				clouds: [],
 
 				// Game setup.
 				setup: function () {
 					// Clear all game objects.
 					this.player = null;
-					this.clouds = null;
 					this.floor = null;
 					this.timer = null;
 
@@ -182,9 +190,6 @@
 					for (var i = 0; i < 8; i++) {
 						this.player.flipFrames[i] = i * 100;
 					}
-
-					// Initialise clouds array.
-					this.clouds = [];
 
 					// Generate a timer.
 					this.timer = new snap.Timer();
@@ -203,6 +208,12 @@
 
 					// Tapping space bar will start the game.
 					if (this.startScreen) {
+
+						// Generate a cloud cluster.
+						if (this.clouds.length < 2) {
+							this.clouds.push(new this.Cloud());
+						}
+						this.clouds.draw();
 
 						// Draw intro text.
 						this.drawText({
@@ -244,6 +255,7 @@
 							snap.startit();
 						}, 1000 / fps);
 					} else {
+						snap.timer.init();
 						this.init(fps);
 					}
 				},
@@ -355,6 +367,17 @@
 				}
 			};
 
+			snap.Cloud.prototype = {
+				constructor: snap.Cloud
+			};
+			snap.clouds.draw = function () {
+				for (var i = 0; i < this.length; i++) {
+					var cloud = this[i];
+					ctx.fillStyle = '#fff';
+					ctx.fillRect(cloud.x, cloud.y, cloud.width, cloud.height);
+				}
+			};
+
 			snap.Floor.prototype = {
 				constructor: snap.Floor,
 				draw: function () {
@@ -383,7 +406,6 @@
 			ctx = canvas.getContext('2d');
 
 			snap.setup();
-			snap.timer.init();
 			snap.startit(snap.fps);
 
 			/*
