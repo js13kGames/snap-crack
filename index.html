@@ -8,13 +8,13 @@
 				height: 960px;
 				margin : 0 auto;
 				background: #dddddd;
-				background: -moz-linear-gradient(top,  #dddddd 0%, #ffffff 100%);
+				background: -moz-linear-gradient(top, #dddddd 0%, #ffffff 100%);
 				background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#dddddd), color-stop(100%,#ffffff));
-				background: -webkit-linear-gradient(top,  #dddddd 0%,#ffffff 100%);
-				background: -o-linear-gradient(top,  #dddddd 0%,#ffffff 100%);
-				background: -ms-linear-gradient(top,  #dddddd 0%,#ffffff 100%);
-				background: linear-gradient(to bottom,  #dddddd 0%,#ffffff 100%);
-				filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#dddddd', endColorstr='#ffffff',GradientType=0 );
+				background: -webkit-linear-gradient(top, #dddddd 0%, #ffffff 100%);
+				background: -o-linear-gradient(top, #dddddd 0%, #ffffff 100%);
+				background: -ms-linear-gradient(top, #dddddd 0%, #ffffff 100%);
+				background: linear-gradient(to bottom, #dddddd 0%, #ffffff 100%);
+				filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#dddddd', endColorstr='#ffffff', GradientType=0);
 			}
 			canvas {
 				margin: 0 auto;
@@ -39,7 +39,7 @@
 					this.x = (canvas.width - this.width) / 2;
 					this.xRate = 5;
 					this.y = 100;
-					this.yRate = 10;
+					this.yRate = 8;
 
 					this.flipping = false;
 					this.flipFrames = [];
@@ -57,6 +57,15 @@
 
 				// Coins.
 				Coin: function () {},
+
+				// Clouds.
+				Cloud: function (x, y, w) {
+					this.width = w;
+					this.height = 100;
+					this.x = x;
+					this.y = y;
+					this.yRate = 10;
+				},
 
 				// Floor.
 				Floor: function () {
@@ -87,6 +96,11 @@
 							if (e.type === 'keyup') {
 								snap.spaceHeld = false;
 							}
+
+							// For intro screen only:
+							if (snap.startScreen) {
+								snap.startScreen = false;
+							}
 							break;
 						// Left arrow.
 						case 37:
@@ -106,6 +120,7 @@
 				},
 
 				// Global helpers.
+				startScreen: true,
 				spaceHeld: false,
 
 				// Game settings.
@@ -113,9 +128,43 @@
 				time: 10000,
 
 				// Utility.
+				randNum: function (low, high) {
+					var result = Math.floor(Math.random() * (high + 1));
+					if (result < low) {
+						return this.randNum(low, high);
+					} else {
+						return result;
+					}
+				},
+
+				randSign: function (value) {
+					if (Math.round(Math.random()) === 0) {
+						return -value;
+					} else {
+						return value;
+					}
+				},
+
+				drawText: function (object) {
+					// This function accepts an object with settings:
+					// strings: font, fill, text, align, x, y
+					if (object.hasOwnProperty('font')) {
+						ctx.font = object['font'];
+					}
+					if (object.hasOwnProperty('fill')) {
+						ctx.fillStyle = object['fill'];
+					}
+					if (object.hasOwnProperty('text')) {
+						ctx.textAlign = object['align'];
+						ctx.fillText(object['text'], object.x, object.y);
+					} else {
+						return 'Supply text, alignment, x and y.';
+					}
+				},
 
 				// Active objects.
 				player: null,
+				clouds: null,
 				floor: null,
 				timer: null,
 
@@ -123,6 +172,7 @@
 				setup: function () {
 					// Clear all game objects.
 					this.player = null;
+					this.clouds = null;
 					this.floor = null;
 					this.timer = null;
 
@@ -133,6 +183,9 @@
 						this.player.flipFrames[i] = i * 100;
 					}
 
+					// Initialise clouds array.
+					this.clouds = [];
+
 					// Generate a timer.
 					this.timer = new snap.Timer();
 
@@ -142,6 +195,57 @@
 					// Assign event listeners.
 					window.addEventListener('keydown', this.controls);
 					window.addEventListener('keyup', this.controls);
+				},
+
+				// Intro screen.
+				startit: function (fps) {
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+					// Tapping space bar will start the game.
+					if (this.startScreen) {
+
+						// Draw intro text.
+						this.drawText({
+							font: 'bold 76px Arial',
+							fill: 'rgba(0,0,0,.8)',
+							align: 'center',
+							x: 320,
+							y: 350,
+							text: 'Snap Crack'
+						});
+						this.drawText({
+							font: '22px Arial',
+							align: 'center',
+							x: 320,
+							y: 440,
+							text: 'Collect coins to offset your medical bills.'
+						});
+						this.drawText({
+							align: 'center',
+							x: 320,
+							y: 485,
+							text: 'Try to grab them mid-spin to double their value.'
+						});
+						this.drawText({
+							align: 'center',
+							x: 320,
+							y: 530,
+							text: 'Land on your feet to mitigate fall damage!'
+						});
+						this.drawText({
+							font: '30px Arial',
+							align: 'center',
+							x: 320,
+							y: 705,
+							text: 'Hit space to spin and start!'
+						});
+
+						setTimeout(function () {
+							snap.startit();
+						}, 1000 / fps);
+					} else {
+						this.init(fps);
+					}
 				},
 
 				// Game loop.
@@ -159,8 +263,12 @@
 							// And activate the end sequence (player actually falls).
 							if (this.player.y < 715) {
 								this.player.y += this.player.yRate;
-							} else {
 								this.player.xRate = 0;
+							} else {
+								this.player.deadFrame = this.player.flipIndex;
+								// Remove event listeners.
+								window.removeEventListener('keydown', this.controls);
+								window.removeEventListener('keyup', this.controls);
 							}
 						}
 
@@ -171,12 +279,7 @@
 							snap.init();
 						}, 1000 / fps);
 					} else {
-						this.player.deadFrame = this.player.flipIndex;
 						this.endit(fps);
-
-						// Remove event listeners.
-						window.removeEventListener('keydown', this.controls);
-						window.removeEventListener('keyup', this.controls);
 					}
 				},
 
@@ -281,7 +384,7 @@
 
 			snap.setup();
 			snap.timer.init();
-			snap.init(snap.fps);
+			snap.startit(snap.fps);
 
 			/*
 				------------
