@@ -213,19 +213,7 @@
 					// Tapping space bar will start the game.
 					if (this.startScreen) {
 
-						// Generate cloud clusters every so often.
-						if (this.clouds.ticks > snap.clouds.maxTicks) {
-							this.clouds.ticks = 0;
-							snap.clouds.make();
-						} else {
-							this.clouds.ticks += 1;
-						}
-						// Remove clouds from game that leave canvas area.
-						for (cloud in this.clouds) {
-							if (this.clouds[cloud]['YPos'] < -50) {
-								this.clouds.splice(cloud, 1);
-							}
-						}
+						// Draw clouds.
 						this.clouds.draw();
 
 						// Draw intro text.
@@ -296,6 +284,9 @@
 								window.removeEventListener('keyup', this.controls);
 							}
 						}
+
+						// Draw clouds.
+						this.clouds.draw();
 
 						// Draw the player.
 						this.player.draw();
@@ -384,6 +375,20 @@
 				constructor: snap.Cloud
 			};
 			snap.clouds.draw = function () {
+				// Generate cloud clusters every so often.
+				if (snap.clouds.ticks > snap.clouds.maxTicks) {
+					snap.clouds.ticks = 0;
+					snap.clouds.make();
+				} else {
+					snap.clouds.ticks += 1;
+				}
+				// Remove clouds from game that leave canvas area.
+				for (cloud in snap.clouds) {
+					if (snap.clouds[cloud]['YPos'] < -50) {
+						snap.clouds.splice(cloud, 1);
+					}
+				}
+
 				for (var i = 0; i < this.length; i++) {
 					var cloud = this[i];
 					ctx.fillStyle = '#fff';
