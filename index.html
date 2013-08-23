@@ -63,8 +63,12 @@
 					this.width = snap.randNum(250, 350);
 					this.height = 100;
 					this.x = -150 + snap.altSign(snap.randNum(0, 640));
-					this.y = 100 + (snap.altSign(snap.randNum(0, 1) * 50));	// Change this later to be self updating.
-					this.yRate = 10;
+
+					this.YPos = 960 + (snap.altSign(snap.randNum(0, 1) * 50));
+					this.yRate = 5;
+					this.y = function () {
+						return this.YPos -= this.yRate;
+					};
 				},
 
 				// Floor.
@@ -209,9 +213,18 @@
 					// Tapping space bar will start the game.
 					if (this.startScreen) {
 
-						// Generate a cloud cluster.
-						if (this.clouds.length < 2) {
-							this.clouds.push(new this.Cloud());
+						// Generate cloud clusters every so often.
+						if (this.clouds.ticks > snap.clouds.maxTicks) {
+							this.clouds.ticks = 0;
+							snap.clouds.make();
+						} else {
+							this.clouds.ticks += 1;
+						}
+						// Remove clouds from game that leave canvas area.
+						for (cloud in this.clouds) {
+							if (this.clouds[cloud]['YPos'] < -50) {
+								this.clouds.splice(cloud, 1);
+							}
 						}
 						this.clouds.draw();
 
@@ -374,9 +387,18 @@
 				for (var i = 0; i < this.length; i++) {
 					var cloud = this[i];
 					ctx.fillStyle = '#fff';
-					ctx.fillRect(cloud.x, cloud.y, cloud.width, cloud.height);
+					ctx.fillRect(cloud.x, cloud.y(), cloud.width, cloud.height);
 				}
 			};
+			// Logic to make random cloud shapes.
+			snap.clouds.make = function () {
+				for (var i = 0; i < 2; i++) {
+					snap.clouds.push(new snap.Cloud());
+				}
+			};
+			// Logic to pace cloud generation.
+			snap.clouds.maxTicks = 100;
+			snap.clouds.ticks = snap.clouds.maxTicks;
 
 			snap.Floor.prototype = {
 				constructor: snap.Floor,
