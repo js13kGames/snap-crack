@@ -173,6 +173,25 @@
 						return 'Supply text, alignment, x and y.';
 					}
 				},
+				// A bounce object should be generated and associated width									<= START WORK HERE. BOUNCE OBJECT!!
+				// whatever object it's being used for.
+				Bounce: function (low, high, increment) {
+					this.low = low;
+					this.high = high;
+					this.increment = increment;
+					this.range = [];
+
+					this.lastIndex = 0;
+
+					// Build the range array which we will iterate through
+					// to get the "bounce" effect between 2 values.
+					for (var i = this.low, j = this.high; i <= j; i += this.increment) {
+						this.range.push(i);
+					}
+					for (var i = this.high, j = this.low; i >= j; i -= this.increment) {
+						this.range.push(i);
+					}
+				},
 
 				// Active objects.
 				player: null,
@@ -194,6 +213,9 @@
 					for (var i = 0; i < 8; i++) {
 						this.player.flipFrames[i] = i * 100;
 					}
+
+					// Make a bounce object for startit instructions.
+					this.introBounce = new snap.Bounce(0.2, 0.8, 0.003);
 
 					// Generate a timer.
 					this.timer = new snap.Timer();
@@ -246,6 +268,7 @@
 						});
 						this.drawText({
 							font: '30px Arial',
+							fill: 'rgba(0,0,0,' + this.introBounce.get() + ')',
 							align: 'center',
 							x: 320,
 							y: 705,
@@ -312,6 +335,21 @@
 					setTimeout(function () {
 						snap.endit();
 					}, 1000 / fps);
+				}
+			};
+
+			snap.Bounce.prototype = {
+				constructor: snap.Bounce,
+				// Return the next value in the bounce sequence per call.
+				get: function () {
+					if (this.lastIndex < this.range.length - 1) {
+						var result = this.range[this.lastIndex];
+						this.lastIndex += 1;
+						return result;
+					} else {
+						this.lastIndex = 0;
+						return this.range[this.lastIndex];
+					}
 				}
 			};
 
@@ -441,6 +479,7 @@
 				------------
 
 				- Randomly generate a timer limit every round.
+				- Add altitude info box.
 
 			*/
 
