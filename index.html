@@ -135,7 +135,7 @@
 
 				// Global helpers.
 				startScreen: true,
-				spaceHeld: false,
+				spaceHeld: false,	// Helper to disable space-down.
 				lastSign: false,	// Helper for altSign utility function.
 
 				// Game settings.
@@ -436,9 +436,12 @@
 					return;
 				}
 
-				// Remove coins that are out of bounds.
+				// Remove coins that are out of bounds or collected.
 				for (c in snap.coins) {
 					if (snap.coins[c]['yPos'] < -30) {
+						snap.coins.splice(c, 1);
+					}
+					if (snap.coins[c] != undefined && snap.coins.collisionCheck(snap.coins[c])) {
 						snap.coins.splice(c, 1);
 					}
 				}
@@ -497,9 +500,37 @@
 						break;
 				}
 			};
+			snap.coins.collisionCheck = function (coin) {
+				var coinLeft = coin.x,
+					coinRight = coin.x + coin.width,
+					coinTop = coin.yPos,
+					coinBottom = coin.yPos + coin.height;
+				var playerLeft = snap.player.x,
+					playerRight = snap.player.x + snap.player.width,
+					playerTop = snap.player.y,
+					playerBottom = snap.player.y + snap.player.height;
+
+				// Check top/bottom bounds, then left/right bounds.
+				if (playerBottom > coinTop && playerTop < coinBottom) {
+					if (playerRight > coinLeft && playerLeft < coinRight) {
+						return true;
+					}
+					
+				} else {
+					return false;
+				}
+			};
 			snap.coins.color = '#999';
 			snap.coins.yGap = 70;
 			snap.coins.xGap = 40;
+			Object.defineProperties(snap.coins, {
+				'draw': {enumerable: false},
+				'generate': {enumerable: false},
+				'collisionCheck': {enumerable: false},
+				'color': {enumerable: false},
+				'yGap': {enumerable: false},
+				'xGap': {enumerable: false}
+			});
 
 			snap.Cloud.prototype = {
 				constructor: snap.Cloud
