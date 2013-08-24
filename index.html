@@ -56,7 +56,17 @@
 				},
 
 				// Coins.
-				Coin: function () {},
+				Coin: function (x, y) {
+					this.width = 28;
+					this.height = 28;
+					this.x = x;
+
+					this.yPos = 960 + y;
+					this.yRate = 7;
+					this.y = function () {
+						return this.yPos -= this.yRate;
+					}
+				},
 
 				// Clouds.
 				Cloud: function () {
@@ -64,10 +74,10 @@
 					this.height = 100;
 					this.x = -150 + snap.altSign(snap.randNum(0, 640));
 
-					this.YPos = 960 + (snap.altSign(snap.randNum(0, 1) * 50));
+					this.yPos = 960 + (snap.altSign(snap.randNum(0, 1) * 50));
 					this.yRate = 5;
 					this.y = function () {
-						return this.YPos -= this.yRate;
+						return this.yPos -= this.yRate;
 					};
 				},
 
@@ -173,7 +183,7 @@
 						return 'Supply text, alignment, x and y.';
 					}
 				},
-				// A bounce object should be generated and associated width									<= START WORK HERE. BOUNCE OBJECT!!
+				// A bounce object should be generated and associated width
 				// whatever object it's being used for.
 				Bounce: function (low, high, increment) {
 					this.low = low;
@@ -199,6 +209,7 @@
 				timer: null,
 
 				clouds: [],
+				coins: [],
 
 				// Game setup.
 				setup: function () {
@@ -214,7 +225,7 @@
 						this.player.flipFrames[i] = i * 100;
 					}
 
-					// Make a bounce object for startit instructions.
+					// Make a bounce object for intro screen.
 					this.introBounce = new snap.Bounce(0.2, 0.8, 0.003);
 
 					// Generate a timer.
@@ -310,6 +321,9 @@
 
 						// Draw clouds.
 						this.clouds.draw();
+
+						// Draw coins.
+						this.coins.draw();
 
 						// Draw the player.
 						this.player.draw();
@@ -409,6 +423,84 @@
 				}
 			};
 
+			snap.Coin.prototype = {
+				constructor: snap.Coin
+			};
+			snap.coins.draw = function () {
+				// Coin generation is based on RNG.
+				if (snap.randNum(0, 100) === 50) {
+					snap.coins.generate();
+				}
+
+				if (snap.coins.length === 0) {
+					return;
+				}
+
+				// Remove coins that are out of bounds.
+				for (c in snap.coins) {
+					if (snap.coins[c]['yPos'] < -30) {
+						snap.coins.splice(c, 1);
+					}
+				}
+
+				// Draw coins to canvas.
+				for (var i = 0, j = this.length; i < j; i++) {
+					var coin = this[i];
+					ctx.fillStyle = snap.coins.color;
+					ctx.fillRect(coin.x, coin.y(), coin.width, coin.height);
+				}
+			};
+			snap.coins.generate = function () {
+				var pattern = function () {
+					return snap.randNum(0, 10);
+				};
+
+				switch (pattern()) {
+					case 1:
+						var numCoins = snap.randNum(5, 10);
+						var xPos = snap.randNum(70, 540);
+						for (var i = 0, y = 0; i < numCoins; i++) {
+							snap.coins.push(new snap.Coin(xPos, y));
+							y += snap.coins.yGap;
+						}
+						break;
+					case 2:
+						var numCoins = snap.randNum(3, 5);
+						var xPos = snap.randNum(70, 100);
+						for (var i = 0, y = 0; i < numCoins; i++) {
+							snap.coins.push(new snap.Coin(xPos, y));
+							y += snap.coins.yGap;
+							xPos += snap.coins.xGap;
+						}
+						break;
+					case 3:
+						var numCoins = snap.randNum(3, 5);
+						var xPos = snap.randNum(510, 540);
+						for (var i = 0, y = 0; i < numCoins; i++) {
+							snap.coins.push(new snap.Coin(xPos, y));
+							y += snap.coins.yGap;
+							xPos -= snap.coins.xGap;
+						}
+						break;
+					case 4:
+						var numLines = snap.randNum(3, 5);
+						var numCoins = numLines * 13;
+						var xPos = 70;
+						for (var i = 0, y = 0; i < numLines; i++) {
+							for (var j = 0; j < 13; j++) {
+								snap.coins.push(new snap.Coin(xPos, y));
+								xPos += snap.coins.xGap;
+							}
+							y += snap.coins.yGap;
+							xPos = 70;
+						}
+						break;
+				}
+			};
+			snap.coins.color = '#999';
+			snap.coins.yGap = 70;
+			snap.coins.xGap = 40;
+
 			snap.Cloud.prototype = {
 				constructor: snap.Cloud
 			};
@@ -422,7 +514,7 @@
 				}
 				// Remove clouds from game that leave canvas area.
 				for (cloud in snap.clouds) {
-					if (snap.clouds[cloud]['YPos'] < -50) {
+					if (snap.clouds[cloud]['yPos'] < -100) {
 						snap.clouds.splice(cloud, 1);
 					}
 				}
