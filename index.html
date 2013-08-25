@@ -281,6 +281,7 @@
 					}
 					// Generate player splat objects.
 					this.player.splats = {
+						winHead: new snap.Graviject(0, 0, 0, 0, 0),
 						dieHead: new snap.Graviject(
 							this.randSign(this.randNum(1, 3) / 5), this.randNum(2, 6),
 							(this.randNum(1, 3) / 50), (this.randNum(1, 3) / 20),
@@ -298,6 +299,13 @@
 							(this.randNum(1, 3) / 50), (this.randNum(1, 3) / 25),
 							(this.randNum(1, 5) / 50))
 					};
+					this.player.splats.winHead.draw = function () {
+						ctx.save();
+						ctx.translate(this.x() + 50, this.y() + 90);
+						ctx.rotate(Math.PI);
+						ctx.drawImage(snap.player.image, 0, 43, 100, 98, -50, -35, 100, 98);
+						ctx.restore();
+					};
 					this.player.splats.dieHead.draw = function () {
 						ctx.save();
 						ctx.translate(this.x() + 50, this.y() + 58);
@@ -307,7 +315,7 @@
 					};
 					this.player.splats.spleen.draw = function () {
 						ctx.save();
-						ctx.translate(this.x(), this.y() + 78);
+						ctx.translate(this.x(), this.y() + 82);
 						ctx.rotate(this.angle());
 						ctx.fillStyle = '#4d4d4d';
 						ctx.fillRect(-7, -7, 15, 15);
@@ -315,7 +323,7 @@
 					};
 					this.player.splats.leftLeg.draw = function () {
 						ctx.save();
-						ctx.translate(this.x(), this.y() + 78);
+						ctx.translate(this.x(), this.y() + 80);
 						ctx.rotate(this.angle());
 						ctx.fillStyle = '#4d4d4d';
 						ctx.fillRect(-7, -15, 15, 30);
@@ -323,7 +331,7 @@
 					};
 					this.player.splats.rightLeg.draw = function () {
 						ctx.save();
-						ctx.translate(this.x(), this.y() + 78);
+						ctx.translate(this.x(), this.y() + 80);
 						ctx.rotate(this.angle());
 						ctx.fillStyle = '#4d4d4d';
 						ctx.fillRect(-7, -15, 15, 30);
@@ -538,13 +546,18 @@
 				},
 				splat: function () {
 					if (!this.splatUpdated) {
+						this.splats.winHead.updatePos();
 						this.splats.dieHead.updatePos();
 						this.splats.spleen.updatePos();
 						this.splats.leftLeg.updatePos();
 						this.splats.rightLeg.updatePos();
 						this.splatUpdated = true;
 					}
-					this.splats.dieHead.draw();
+					if (this.deadFrame < 3 || this.deadFrame > 5) {
+						this.splats.dieHead.draw();
+					} else {
+						this.splats.winHead.draw();
+					}
 					this.splats.spleen.draw();
 					this.splats.leftLeg.draw();
 					this.splats.rightLeg.draw();
