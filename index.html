@@ -104,15 +104,10 @@
 				},
 
 				// Gravity affected objects.
-				Graviject: function (x, y, xRate, yRate, xRateRate, yRateRate) {
-					this.baseLine = 10;
-					this.yRateMod = function () {
-						return this.yRate += this.yRateRate;
-					};
-				},
-				// Splat heads.
-				WinHead: function (x, y, xRate, yRate, xRateRate, yRateRate) {
-					this.xPos = x;
+				Graviject: function (xRate, yRate, xRateRate, yRateRate, rotateRate) {
+					this.baseLine = 750;
+					
+					this.xPos = null;
 					this.x = function () {
 						return this.xPos += this.xRate();
 					};
@@ -120,17 +115,17 @@
 					this.initialXRate = xRate;
 					this.xRateRate = xRateRate;
 					this.xRate = function () {
-						if (this.yPos > this.baseLine) {
+						if (this.yPos < this.baseLine) {
 							return xRate;
 						} else {
 							return 0;
 						}
 					};
 
-					this.yPos = y;
+					this.yPos = null;
 					this.y = function () {
-						if (this.yPos > this.baseLine) {
-							return this.yPos += this.yRate();
+						if (this.yPos < this.baseLine) {
+							return this.yPos -= this.yRate();
 						} else {
 							return this.yPos;
 						}
@@ -140,6 +135,15 @@
 					this.yRateRate = yRateRate;
 					this.yRate = function () {
 						return this.initialYRate -= this.yRateRate;
+					};
+
+					this.initialAngle = rotateRate;
+					this.angle = function () {
+						if (this.yPos < this.baseLine) {
+							return this.initialAngle += rotateRate;
+						} else {
+							return this.initialAngle;
+						}
 					};
 				},
 
@@ -186,7 +190,7 @@
 
 				// Game settings.
 				fps: 40,
-				time: 10000,
+				time: 1000,
 				penalties: {
 					win: 150,
 					lose: 1000
@@ -277,9 +281,53 @@
 					}
 					// Generate player splat objects.
 					this.player.splats = {
-						winHead: new snap.WinHead(this.player.x, this.player.y,
+						dieHead: new snap.Graviject(
 							this.randSign(this.randNum(1, 3) / 5), this.randNum(2, 6),
-							(this.randNum(1, 3) / 50), (this.randNum(1, 3) / 20))
+							(this.randNum(1, 3) / 50), (this.randNum(1, 3) / 20),
+							(this.randNum(1, 5) / 100)),
+						spleen: new snap.Graviject(
+							this.randSign(this.randNum(1, 3) / 3), this.randNum(3, 9),
+							(this.randNum(1, 3) / 50), (this.randNum(1, 3) / 25),
+							(this.randNum(1, 5) / 70)),
+						leftLeg: new snap.Graviject(
+							this.randSign(this.randNum(2, 4) / 2), this.randNum(4, 6),
+							(this.randNum(1, 3) / 50), (this.randNum(1, 3) / 25),
+							(this.randNum(1, 5) / 20)),
+						rightLeg: new snap.Graviject(
+							this.randSign(this.randNum(1, 4) / 2), this.randNum(1, 3),
+							(this.randNum(1, 3) / 50), (this.randNum(1, 3) / 25),
+							(this.randNum(1, 5) / 50))
+					};
+					this.player.splats.dieHead.draw = function () {
+						ctx.save();
+						ctx.translate(this.x() + 50, this.y() + 58);
+						ctx.rotate(this.angle());
+						ctx.drawImage(snap.player.image, 0, 58, 100, 85, -50, -35, 100, 85);
+						ctx.restore();
+					};
+					this.player.splats.spleen.draw = function () {
+						ctx.save();
+						ctx.translate(this.x(), this.y() + 78);
+						ctx.rotate(this.angle());
+						ctx.fillStyle = '#4d4d4d';
+						ctx.fillRect(-7, -7, 15, 15);
+						ctx.restore();
+					};
+					this.player.splats.leftLeg.draw = function () {
+						ctx.save();
+						ctx.translate(this.x(), this.y() + 78);
+						ctx.rotate(this.angle());
+						ctx.fillStyle = '#4d4d4d';
+						ctx.fillRect(-7, -15, 15, 30);
+						ctx.restore();
+					};
+					this.player.splats.rightLeg.draw = function () {
+						ctx.save();
+						ctx.translate(this.x(), this.y() + 78);
+						ctx.rotate(this.angle());
+						ctx.fillStyle = '#4d4d4d';
+						ctx.fillRect(-7, -15, 15, 30);
+						ctx.restore();
 					};
 
 					// Make a bounce object for intro screen.
@@ -306,7 +354,7 @@
 					// Tapping space bar will start the game.
 					if (this.startScreen) {
 
-						this.player.splats.winHead.draw();
+						//this.player.splats.dieHead.draw();
 
 						// Draw clouds.
 						this.clouds.draw();
@@ -438,6 +486,7 @@
 
 			snap.Brick.prototype = {
 				constructor: snap.Brick,
+				splatUpdated: false,
 				// Unless spacebar pressed, default to falling image.
 				draw: function () {
 					// Draw function handles all player states.
@@ -488,8 +537,23 @@
 					}
 				},
 				splat: function () {
-					ctx.drawImage(this.image, 0, 58, 100, 85, this.x, this.y + 58, 100, 85);
-					console.log('splat');
+					if (!this.splatUpdated) {
+						this.splats.dieHead.updatePos();
+						this.splats.spleen.updatePos();
+						this.splats.leftLeg.updatePos();
+						this.splats.rightLeg.updatePos();
+						this.splatUpdated = true;
+					}
+					this.splats.dieHead.draw();
+					this.splats.spleen.draw();
+					this.splats.leftLeg.draw();
+					this.splats.rightLeg.draw();
+				},
+				getX: function () {
+					return this.x;
+				},
+				getY: function () {
+					return this.y;
 				}
 			};
 
@@ -662,14 +726,12 @@
 			};
 
 			snap.Graviject.prototype = {
-				constructor: snap.Graviject
+				constructor: snap.Graviject,
+				updatePos: function () {
+					this.xPos = snap.player.getX();
+					this.yPos = snap.player.getY();
+				}
 			}
-
-			snap.WinHead.prototype = new snap.Graviject();
-			snap.WinHead.prototype.constructor = snap.Graviject;
-			snap.WinHead.prototype.draw = function () {
-				ctx.drawImage(snap.player.image, 0, 58, 100, 85, this.x(), this.y() + 58, 100, 85);
-			};
 
 			snap.Score.prototype = {
 				constructor: snap.Score,
