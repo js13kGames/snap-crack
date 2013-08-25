@@ -96,6 +96,12 @@
 				Score: function () {
 					this.val = 0;
 					this.balance = 0;
+					this.flipBonus = 0;
+					this.landing = 0;
+
+					// Store the previous and new scores for consecutive games.
+					this.prevScore = 0;
+					this.newScore = 0;
 				},
 
 				// Timer.
@@ -185,6 +191,7 @@
 				// Global helpers.
 				startScreen: true,
 				endScreen: false,
+				resultsScreen: false,
 				spaceHeld: false,	// Helper to disable space-down.
 				lastSign: false,	// Helper for altSign utility function.
 
@@ -390,7 +397,7 @@
 							align: 'center',
 							x: 320,
 							y: 485,
-							text: 'Try to grab them mid-spin to double their value.'
+							text: 'Grab them mid-spin for a flip bonus.'
 						});
 						this.drawText({
 							align: 'center',
@@ -449,6 +456,9 @@
 						// Draw the player.
 						this.player.draw();
 
+						// Draw the altitude (timer).
+						this.timer.draw();
+
 						// Draw the score.
 						this.score.draw();
 
@@ -458,6 +468,29 @@
 					} else {
 						this.endScreen = true;
 						this.endit(fps);
+
+						// Grey out the play area.
+						var results = setTimeout(function () {
+							snap.resultsScreen = true;
+							clearTimeout(results);
+						}, 1000);
+						// Set staggered display times for results sheet.
+						var scoreIn = setTimeout(function () {
+							snap.score.switches.score = true;
+							clearTimeout(scoreIn);
+						}, 2000);
+						var flipBonusIn = setTimeout(function () {
+							snap.score.switches.flipBonus = true;
+							clearTimeout(flipBonusIn);
+						}, 2300);
+						var landingIn = setTimeout(function () {
+							snap.score.switches.landing = true;
+							clearTimeout(landingIn);
+						}, 2600);
+						var totalIn = setTimeout(function () {
+							snap.score.switches.total = true;
+							clearTimeout(totalIn);
+						}, 2900);
 					}
 				},
 
@@ -470,6 +503,9 @@
 
 					// Draw the player.
 					this.player.draw();
+
+					// Draw the altitude (timer).
+					this.timer.draw();
 
 					// Draw the score.
 					this.score.draw();
@@ -557,8 +593,10 @@
 					}
 					if (this.deadFrame < 3 || this.deadFrame > 5) {
 						this.splats.dieHead.draw();
+						snap.score.landing = -snap.penalties.lose;
 					} else {
 						this.splats.winHead.draw();
+						snap.score.landing = snap.penalties.win;
 					}
 					this.splats.spleen.draw();
 					this.splats.leftLeg.draw();
@@ -737,6 +775,20 @@
 				},
 				get: function () {
 					return snap.time / 1000;
+				},
+				draw: function () {
+					// Altitude backing (altitude is timer).
+					ctx.fillStyle = 'rgba(0,0,0,.8)';
+					ctx.fillRect(500, 20, 120, 55);
+					// Altitude text.
+					snap.drawText({
+						font: '23px Arial',
+						fill: '#fff',
+						align: 'right',
+						x: 595,
+						y: 55,
+						text: (this.get() * 10) + 'm'
+					});
 				}
 			};
 
@@ -750,10 +802,17 @@
 
 			snap.Score.prototype = {
 				constructor: snap.Score,
-				multiplier: 2,
+				saved: false,
+				switches: {
+					score: false,
+					flipBonus: false,
+					landing: false,
+					total: false,
+				},
 				update: function (coin) {
 					if (snap.player.flipping) {
-						this.val += coin.val * this.multiplier;
+						this.val += coin.val;
+						this.flipBonus += coin.val;
 					} else {
 						this.val += coin.val;
 					}
@@ -797,8 +856,73 @@
 						align: 'right',
 						x: 195,
 						y: 119,
-						text: this.balance
+						text: '$' + this.balance
 					});
+
+					// If the results screen timeout has fired, we bang in
+					// with results.
+					if (snap.resultsScreen) {
+						ctx.fillStyle = 'rgba(0,0,0,.8)';
+						ctx.fillRect(0, 0, 640, 960);
+					}
+					if (snap.score.switches.score) {
+						// Score text.
+						snap.drawText({
+							font: '35px Arial',
+							fill: '#fff',
+							align: 'center',
+							x: 320,
+							y: 290,
+							text: 'Score: ' + this.val
+						});
+					}
+					if (snap.score.switches.flipBonus) {
+						// Score text.
+						snap.drawText({
+							align: 'center',
+							x: 320,
+							y: 350,
+							text: 'Flip bonus: ' + this.flipBonus
+						});
+					}
+					if (snap.score.switches.landing) {
+						// Score text.
+						snap.drawText({
+							align: 'center',
+							x: 320,
+							y: 410,
+							text: 'Landing: ' + this.landing
+						});
+					}
+					// Calculate the total score, taking into consideration
+					// any existing scores.
+					var total = function () {
+						var thisPrev = snap.score.prevScore,
+							thisNet = snap.score.val + snap.score.flipBonus
+								+ snap.score.landing,
+							thisGross = thisPrev + thisNet;
+						// Save the newly computed score into memory for the next game.
+						if (!snap.score.saved) {
+							snap.score.newScore += thisNet;
+							snap.score.saved = true;
+						}
+						// Set either 'Debt' or 'Profit' depending on +/- score.
+						if (thisGross > 0) {
+							return 'Profit: $' + thisGross;
+						} else {
+							return 'Debt: -$' + thisGross * -1;
+						}
+					};
+					if (snap.score.switches.total) {
+						// Score text.
+						snap.drawText({
+							font: '70px Arial',
+							align: 'center',
+							x: 320,
+							y: 550,
+							text: total()
+						});
+					}
 				}
 			};
 
@@ -815,7 +939,7 @@
 				------------
 
 				- Randomly generate a timer limit every round.
-				- Add altitude info box.
+				- Difficulty levels: Baby[1], Amateur [2], Hardcore [3] - set score penalty rates.
 
 			*/
 
