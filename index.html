@@ -103,6 +103,46 @@
 					this.limit = snap.time;
 				},
 
+				// Gravity affected objects.
+				Graviject: function (x, y, xRate, yRate, xRateRate, yRateRate) {
+					this.baseLine = 10;
+					this.yRateMod = function () {
+						return this.yRate += this.yRateRate;
+					};
+				},
+				// Splat heads.
+				WinHead: function (x, y, xRate, yRate, xRateRate, yRateRate) {
+					this.xPos = x;
+					this.x = function () {
+						return this.xPos += this.xRate();
+					};
+
+					this.initialXRate = xRate;
+					this.xRateRate = xRateRate;
+					this.xRate = function () {
+						if (this.yPos > this.baseLine) {
+							return xRate;
+						} else {
+							return 0;
+						}
+					};
+
+					this.yPos = y;
+					this.y = function () {
+						if (this.yPos > this.baseLine) {
+							return this.yPos += this.yRate();
+						} else {
+							return this.yPos;
+						}
+					};
+
+					this.initialYRate = yRate;
+					this.yRateRate = yRateRate;
+					this.yRate = function () {
+						return this.initialYRate -= this.yRateRate;
+					};
+				},
+
 				// Controls.
 				controls: function (e) {
 					switch (e.keyCode) {
@@ -140,6 +180,7 @@
 
 				// Global helpers.
 				startScreen: true,
+				endScreen: false,
 				spaceHeld: false,	// Helper to disable space-down.
 				lastSign: false,	// Helper for altSign utility function.
 
@@ -234,6 +275,12 @@
 					for (var i = 0; i < 8; i++) {
 						this.player.flipFrames[i] = i * 100;
 					}
+					// Generate player splat objects.
+					this.player.splats = {
+						winHead: new snap.WinHead(this.player.x, this.player.y,
+							this.randSign(this.randNum(1, 3) / 5), this.randNum(2, 6),
+							(this.randNum(1, 3) / 50), (this.randNum(1, 3) / 20))
+					};
 
 					// Make a bounce object for intro screen.
 					this.introBounce = new snap.Bounce(0.2, 0.8, 0.003);
@@ -258,6 +305,8 @@
 
 					// Tapping space bar will start the game.
 					if (this.startScreen) {
+
+						this.player.splats.winHead.draw();
 
 						// Draw clouds.
 						this.clouds.draw();
@@ -348,6 +397,7 @@
 							snap.init();
 						}, 1000 / fps);
 					} else {
+						this.endScreen = true;
 						this.endit(fps);
 					}
 				},
@@ -391,10 +441,9 @@
 				// Unless spacebar pressed, default to falling image.
 				draw: function () {
 					// Draw function handles all player states.
-					// If the main game loop has ended, draw the end frame only.
+					// If the main game loop has ended, splat the player.
 					if (this.deadFrame !== null) {
-						ctx.drawImage(this.image, this.flipFrames[this.deadFrame], 
-							0, 100, 142, this.x, this.y, 100, 142);
+						this.splat();
 					} else {
 						// Depending on 'flipping' flag, serves different images.
 						if (!this.flipping) {
@@ -416,8 +465,6 @@
 							this.x = 540;
 						}
 					}
-
-					return this;
 				},
 				fall: function () {
 					ctx.drawImage(this.image, 0, 0, 100, 142, this.x, this.y, 100, 142);
@@ -439,6 +486,10 @@
 							this.flipFrames[this.flipIndex],
 							0, 100, 142, this.x, this.y, 100, 142);
 					}
+				},
+				splat: function () {
+					ctx.drawImage(this.image, 0, 58, 100, 85, this.x, this.y + 58, 100, 85);
+					console.log('splat');
 				}
 			};
 
@@ -610,6 +661,16 @@
 				}
 			};
 
+			snap.Graviject.prototype = {
+				constructor: snap.Graviject
+			}
+
+			snap.WinHead.prototype = new snap.Graviject();
+			snap.WinHead.prototype.constructor = snap.Graviject;
+			snap.WinHead.prototype.draw = function () {
+				ctx.drawImage(snap.player.image, 0, 58, 100, 85, this.x(), this.y() + 58, 100, 85);
+			};
+
 			snap.Score.prototype = {
 				constructor: snap.Score,
 				multiplier: 2,
@@ -642,7 +703,7 @@
 
 					// Balance backing.
 					ctx.fillStyle = 'rgba(0,0,0,.8)';
-					ctx.fillRect(20, 88, 195, 55);
+					ctx.fillRect(20, 85, 195, 55);
 					// Balance text.
 					var balance = 'Debt:';
 					if (snap.score.balance > 0) {
@@ -652,13 +713,13 @@
 						fill: '#fff',
 						align: 'left',
 						x: 40,
-						y: 122,
+						y: 119,
 						text: balance
 					});
 					snap.drawText({
 						align: 'right',
 						x: 195,
-						y: 122,
+						y: 119,
 						text: this.balance
 					});
 				}
