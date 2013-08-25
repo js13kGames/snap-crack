@@ -281,6 +281,9 @@
 					}
 					// Generate player splat objects.
 					this.player.splats = {
+						updated: false,
+						bloody: [],
+						notSoBloody: [],
 						winHead: new snap.Graviject(0, 0, 0, 0, 0),
 						dieHead: new snap.Graviject(
 							this.randSign(this.randNum(1, 3) / 5), this.randNum(2, 6),
@@ -494,7 +497,6 @@
 
 			snap.Brick.prototype = {
 				constructor: snap.Brick,
-				splatUpdated: false,
 				// Unless spacebar pressed, default to falling image.
 				draw: function () {
 					// Draw function handles all player states.
@@ -545,13 +547,13 @@
 					}
 				},
 				splat: function () {
-					if (!this.splatUpdated) {
+					if (!this.splats.updated) {
 						this.splats.winHead.updatePos();
 						this.splats.dieHead.updatePos();
 						this.splats.spleen.updatePos();
 						this.splats.leftLeg.updatePos();
 						this.splats.rightLeg.updatePos();
-						this.splatUpdated = true;
+						this.splats.updated = true;
 					}
 					if (this.deadFrame < 3 || this.deadFrame > 5) {
 						this.splats.dieHead.draw();
