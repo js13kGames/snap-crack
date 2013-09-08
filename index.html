@@ -83,6 +83,14 @@
 					};
 				},
 
+				// Blood.
+				Blood: function () {
+					this.size = snap.randNum(5, 20);
+					this.color = 'rgba(255, 0, 0, .7)';
+
+					snap.Graviject.apply(this, arguments);
+				},
+
 				// Floor.
 				Floor: function () {
 					this.width = 670;
@@ -111,6 +119,7 @@
 				// Gravity affected objects.
 				Graviject: function (xRate, yRate, xRateRate, yRateRate, rotateRate) {
 					this.baseLine = 750;
+					this.landed = false;
 					
 					this.xPos = null;
 					this.x = function () {
@@ -132,6 +141,7 @@
 						if (this.yPos < this.baseLine) {
 							return this.yPos -= this.yRate();
 						} else {
+							this.landed = true;
 							return this.yPos;
 						}
 					};
@@ -200,6 +210,8 @@
 							window.removeEventListener('keydown', snap.playAgain);
 
 							// Clear active scores.
+							snap.score.val = 0;
+							snap.score.flipBonus = 0;
 							snap.score.landing = 0;
 							snap.score.newScore = 0;
 							break;
@@ -219,7 +231,7 @@
 				time: 0,
 				penalties: {
 					win: 150,
-					lose: 1000
+					lose: 1500
 				},
 
 				// Utility.
@@ -291,6 +303,7 @@
 
 				clouds: [],
 				coins: [],
+				blood: [],
 
 				// Game setup.
 				setup: function () {
@@ -302,6 +315,10 @@
 					// Clear active game states.
 					this.endScreen = false;
 					this.resultsScreen = false;
+
+					// Mop up blood.
+					this.blood.length = 0;
+					this.blood.made = false;
 
 					// Transfer any saved scores.
 					if (this.score !== null) {
@@ -318,8 +335,6 @@
 					// Generate player splat objects.
 					this.player.splats = {
 						updated: false,
-						bloody: [],
-						notSoBloody: [],
 						winHead: new snap.Graviject(0, 0, 0, 0, 0),
 						dieHead: new snap.Graviject(
 							this.randSign(this.randNum(1, 3) / 5), this.randNum(2, 6),
@@ -354,7 +369,7 @@
 					};
 					this.player.splats.spleen.draw = function () {
 						ctx.save();
-						ctx.translate(this.x(), this.y() + 82);
+						ctx.translate(this.x() + 50, this.y() + 82);
 						ctx.rotate(this.angle());
 						ctx.fillStyle = '#4d4d4d';
 						ctx.fillRect(-7, -7, 15, 15);
@@ -370,7 +385,7 @@
 					};
 					this.player.splats.rightLeg.draw = function () {
 						ctx.save();
-						ctx.translate(this.x(), this.y() + 80);
+						ctx.translate(this.x() + 100, this.y() + 80);
 						ctx.rotate(this.angle());
 						ctx.fillStyle = '#4d4d4d';
 						ctx.fillRect(-7, -15, 15, 30);
@@ -630,6 +645,7 @@
 					}
 				},
 				splat: function () {
+					// Draw splatted player.
 					if (!this.splats.updated) {
 						this.splats.winHead.updatePos();
 						this.splats.dieHead.updatePos();
@@ -648,6 +664,9 @@
 					this.splats.spleen.draw();
 					this.splats.leftLeg.draw();
 					this.splats.rightLeg.draw();
+
+					// Draw blood splats.
+					snap.blood.draw();
 				},
 				getX: function () {
 					return this.x;
@@ -809,6 +828,57 @@
 					ctx.fillRect(this.x, this.y, this.width, this.height);
 				}
 			};
+
+			snap.Blood.prototype = {
+				constructor: snap.Graviject,
+				updatePos: function () {
+					this.xPos = snap.player.getX();
+					this.yPos = snap.player.getY();
+				}
+			};
+			snap.blood.made = false;
+			snap.blood.draw = function () {
+				if (!this.made) {
+					this.make();
+					for (var splat in this) {
+						this[splat].updatePos();
+					}
+				}
+
+				for (var splat in this) {
+					ctx.save();
+					ctx.translate(this[splat].x() + 50, this[splat].y() + 82);
+					ctx.rotate(this[splat].angle());
+					ctx.fillStyle = this[splat].color;
+					ctx.fillRect(-this[splat].size/2, -this[splat].size/2,
+						this[splat].size, this[splat].size);
+					ctx.restore();
+				}
+			}
+			snap.blood.make = function () {
+				if (snap.player.deadFrame < 3 || snap.player.deadFrame > 5) {
+					// Lose
+					var bloodNum = snap.randNum(25, 40);
+				} else {
+					// Win
+					var bloodNum = snap.randNum(10, 15);
+				}
+
+				for (var i = 0; i < bloodNum; i++) {
+					this.push(new snap.Blood(
+						snap.randSign(snap.randNum(1, 4) / 2), snap.randNum(2, 5),
+						(snap.randNum(1, 3) / 20), (snap.randNum(1, 3) / 20),
+						(snap.randNum(1, 5) / 20))
+					);
+				}
+
+				this.made = true;
+			}
+			Object.defineProperties(snap.blood, {
+				'draw': {enumerable: false},
+				'made': {enumerable: false},
+				'make': {enumerable: false}
+			});
 
 			snap.Timer.prototype = {
 				constructor: snap.Timer,
