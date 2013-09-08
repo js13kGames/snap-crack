@@ -51,8 +51,7 @@
 					this.moveRight = false;
 
 					this.deadFrame = null;
-
-					this.jitter = false;
+					this.deadSound = false;
 				},
 
 				// Coins.
@@ -89,6 +88,20 @@
 					this.color = 'rgba(255, 0, 0, .7)';
 
 					snap.Graviject.apply(this, arguments);
+				},
+
+				// Poot.
+				Poot: function () {
+					this.size = snap.randNum(5, 30);
+					this.color = 'rgba(255, 255, 255, .5)';
+
+					this.x = snap.player.getX() + snap.randSign(snap.randNum(0, 25));
+					this.yPos = snap.player.getY();
+					this.yRate = snap.randNum(2, 3);
+
+					this.y = function () {
+						return this.yPos -= this.yRate;
+					};
 				},
 
 				// Floor.
@@ -168,6 +181,7 @@
 						// Space bar.
 						case 32:
 							if (!snap.spaceHeld) {
+								snap.sfx.hits.push(new Audio('audio/spin.wav').play());
 								snap.player.flipping = true;
 								snap.spaceHeld = true;
 							}
@@ -178,6 +192,7 @@
 							// For intro screen only:
 							if (snap.startScreen) {
 								snap.startScreen = false;
+								snap.sfx.hits.push(new Audio('audio/win.wav').play());
 							}
 							break;
 						// Left arrow.
@@ -227,11 +242,13 @@
 
 				// Game settings.
 				fps: 40,
-				maxTime: 1000,
+				maxTime: function () {
+					return this.randNum(5000, 15000);
+				},
 				time: 0,
 				penalties: {
 					win: 150,
-					lose: 1500
+					lose: 2000
 				},
 
 				// Utility.
@@ -304,6 +321,19 @@
 				clouds: [],
 				coins: [],
 				blood: [],
+				poot: [],
+
+				// Sound effects.
+				sfx: {
+					coins: [],
+					hits: [],
+					switches: {
+						score: false,
+						flipBonus: false,
+						landing: false,
+						total: false
+					}
+				},
 
 				// Game setup.
 				setup: function () {
@@ -312,13 +342,22 @@
 					this.floor = null;
 					this.timer = null;
 
+					// Clear sounds.
+					this.sfx.coins = [];
+					this.sfx.hits = [];
+					this.sfx.switches.score = false;
+					this.sfx.switches.flipBonus = false;
+					this.sfx.switches.landing = false;
+					this.sfx.switches.total = false;
+
 					// Clear active game states.
 					this.endScreen = false;
 					this.resultsScreen = false;
 
-					// Mop up blood.
+					// Mop up blood. Clear poot.
 					this.blood.length = 0;
 					this.blood.made = false;
+					this.poot.length = 0;
 
 					// Transfer any saved scores.
 					if (this.score !== null) {
@@ -396,7 +435,7 @@
 					this.introBounce = new snap.Bounce(0.2, 0.8, 0.003);
 
 					// Generate a timer.
-					this.time = this.maxTime;
+					this.time = this.maxTime();
 					this.timer = new snap.Timer();
 
 					// Generate a score object if it doesn't already exist.
@@ -563,22 +602,22 @@
 							var flipBonusIn = setTimeout(function () {
 								snap.score.switches.flipBonus = true;
 								clearTimeout(flipBonusIn);
-							}, 1300);
+							}, 1700);
 							var landingIn = setTimeout(function () {
 								snap.score.switches.landing = true;
 								clearTimeout(landingIn);
-							}, 1600);
+							}, 2000);
 							var totalIn = setTimeout(function () {
 								snap.score.switches.total = true;
 								clearTimeout(totalIn);
-							}, 1900);
+							}, 2300);
 							var againIn = setTimeout(function () {
 								snap.score.switches.again = true;
 								clearTimeout(againIn);
 
 								// Set event listener to restart game.
 								window.addEventListener('keydown', snap.playAgain);
-							}, 2200);
+							}, 2600);
 						}
 					}
 
@@ -631,6 +670,9 @@
 						} else if (this.x >= 540) {
 							this.x = 540;
 						}
+
+						// Draw poot bubbles.
+						snap.poot.draw();
 					}
 				},
 				fall: function () {
@@ -670,9 +712,23 @@
 					if (this.deadFrame < 3 || this.deadFrame > 5) {
 						this.splats.dieHead.draw();
 						snap.score.landing = -snap.penalties.lose;
+						if (!this.deadSound) {
+							snap.sfx.hits.push(new Audio('audio/hitt.wav').play());
+							this.deadSound = true;
+						}
 					} else {
 						this.splats.winHead.draw();
 						snap.score.landing = snap.penalties.win;
+						if (!this.deadSound) {
+							snap.sfx.hits.push(new Audio('audio/miniwin.wav').play());
+							setTimeout(function () {
+								snap.sfx.hits.push(new Audio('audio/miniwin.wav').play());
+							}, 300);
+							setTimeout(function () {
+								snap.sfx.hits.push(new Audio('audio/win.wav').play());
+							}, 460);
+							this.deadSound = true;
+						}
 					}
 					this.splats.spleen.draw();
 					this.splats.leftLeg.draw();
@@ -781,6 +837,13 @@
 					if (playerRight > coinLeft && playerLeft < coinRight) {
 						// Update the score.
 						snap.score.update(coin);
+						// Play sound.
+						snap.sfx.coins.push(new Audio('audio/win.wav').play());
+						for (var sound in snap.sfx.coins) {
+							if (snap.sfx.coins[sound] == undefined) {
+								snap.sfx.coins.splice(sound, 1);
+							}
+						}
 						// Remove the coin.
 						return true;
 					}
@@ -893,6 +956,40 @@
 				'make': {enumerable: false}
 			});
 
+			snap.Poot.prototype = {
+				constructor: snap.Graviject
+			};
+			snap.poot.ticks = 0;
+			snap.poot.draw = function () {
+				this.make();
+
+				for (var poot in this) {
+					// Remove off-screen poots.
+					if (this[poot].y() < -20) {
+						this.splice(poot, 1);
+					}
+
+					ctx.fillStyle = this[poot].color;
+					ctx.fillRect(
+						this[poot].x + (50 - this[poot].size/2),
+						this[poot].y() + 10,
+						this[poot].size, this[poot].size);
+				}
+			}
+			snap.poot.make = function () {
+				// Every x number of ticks, poot.
+				this.ticks += 1;
+				if (this.ticks >= 8) {
+					this.ticks = 0;
+					this.push(new snap.Poot());
+				}
+			};
+			Object.defineProperties(snap.poot, {
+				'draw': {enumerable: false},
+				'make': {enumerable: false},
+				'ticks': {enumerable: false}
+			});
+
 			snap.Timer.prototype = {
 				constructor: snap.Timer,
 				init: function () {
@@ -917,7 +1014,7 @@
 						align: 'right',
 						x: 595,
 						y: 55,
-						text: (this.get() * 10) + 'm'
+						text: Math.ceil((this.get() * 10)) + 'm'
 					});
 				}
 			};
@@ -1008,6 +1105,10 @@
 								y: 290,
 								text: 'Score: ' + this.val
 							});
+							if (!snap.sfx.switches.score) {
+								snap.sfx.hits.push(new Audio('audio/hitt.wav').play());
+								snap.sfx.switches.score = true;
+							}
 						}
 						if (snap.score.switches.flipBonus) {
 							// Score text.
@@ -1017,6 +1118,10 @@
 								y: 350,
 								text: 'Flip bonus: ' + this.flipBonus
 							});
+							if (!snap.sfx.switches.flipBonus) {
+								snap.sfx.hits.push(new Audio('audio/hitt.wav').play());
+								snap.sfx.switches.flipBonus = true;
+							}
 						}
 						if (snap.score.switches.landing) {
 							// Score text.
@@ -1026,6 +1131,10 @@
 								y: 410,
 								text: 'Landing: ' + this.landing
 							});
+							if (!snap.sfx.switches.landing) {
+								snap.sfx.hits.push(new Audio('audio/hitt.wav').play());
+								snap.sfx.switches.landing = true;
+							}
 						}
 						// Calculate the total score, taking into consideration
 						// any existing scores.
@@ -1055,10 +1164,13 @@
 								y: 550,
 								text: total()
 							});
-						}
-						if (snap.score.switches.again) {
+							if (!snap.sfx.switches.total) {
+								snap.sfx.hits.push(new Audio('audio/hitt.wav').play());
+								snap.sfx.switches.total = true;
+							}
+							// Play again text.
 							snap.drawText({
-								font: '20px Arial',
+								font: '24px Arial',
 								fill: 'rgba(255,255,255,' + snap.introBounce.get() + ')',
 								align: 'center',
 								x: 320,
