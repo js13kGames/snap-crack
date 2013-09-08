@@ -245,10 +245,15 @@
 				maxTime: function () {
 					return this.randNum(5000, 15000);
 				},
+				startTime: 0,
 				time: 0,
 				penalties: {
 					win: 150,
-					lose: 2000
+					lose: 2000,
+					calc: function () {
+						this.win = Math.ceil(snap.startTime * 0.01);
+						this.lose = Math.ceil(snap.startTime * 0.25);
+					}
 				},
 
 				// Utility.
@@ -436,6 +441,7 @@
 
 					// Generate a timer.
 					this.time = this.maxTime();
+					this.startTime = this.time;
 					this.timer = new snap.Timer();
 
 					// Generate a score object if it doesn't already exist.
@@ -700,6 +706,9 @@
 					}
 				},
 				splat: function () {
+					// Calculate penalties.
+					snap.penalties.calc();
+
 					// Draw splatted player.
 					if (!this.splats.updated) {
 						this.splats.winHead.updatePos();
