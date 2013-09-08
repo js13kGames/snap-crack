@@ -134,7 +134,7 @@
 					this.landing = 0;
 
 					// Store the previous and new scores for consecutive games.
-					this.prevScore = 0;
+					this.prevScore = -1300;
 					this.newScore = 0;
 				},
 
@@ -528,7 +528,7 @@
 							align: 'center',
 							x: 320,
 							y: 525,
-							text: 'Grab them mid-spin for a flip bonus.'
+							text: 'Entertain us! Grab them mid-spin for a flip bonus.'
 						});
 						this.drawText({
 							align: 'center',
@@ -1122,9 +1122,6 @@
 				},
 				update: function (coin) {
 					if (snap.player.flipping) {
-						// Special coin bonus animation.
-						
-
 						// Apply flip bonus.
 						this.val += coin.val;
 						this.flipBonus += coin.val;
