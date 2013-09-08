@@ -192,8 +192,9 @@
 					switch (e.keyCode) {
 						// Space bar.
 						case 32:
-							// Set up game stage.
+							// Reset game stage.
 							snap.setup();
+							snap.timer.init();
 							snap.init(snap.fps);
 							clearTimeout(snap.enditLoop);
 							window.removeEventListener('keydown', snap.playAgain);
@@ -214,7 +215,8 @@
 
 				// Game settings.
 				fps: 40,
-				time: 1000,
+				maxTime: 1000,
+				time: 0,
 				penalties: {
 					win: 150,
 					lose: 1000
@@ -297,8 +299,13 @@
 					this.floor = null;
 					this.timer = null;
 
+					// Clear active game states.
+					this.endScreen = false;
+					this.resultsScreen = false;
+
 					// Transfer any saved scores.
 					if (this.score !== null) {
+						this.score.saved = false;
 						this.score.prevScore += this.score.newScore;
 					}
 
@@ -374,12 +381,19 @@
 					this.introBounce = new snap.Bounce(0.2, 0.8, 0.003);
 
 					// Generate a timer.
+					this.time = this.maxTime;
 					this.timer = new snap.Timer();
 
 					// Generate a score object if it doesn't already exist.
 					if (this.score === null) {
 						this.score = new snap.Score();
 					}
+
+					this.score.switches.score = false;
+					this.score.switches.flipBonus = false;
+					this.score.switches.landing = false;
+					this.score.switches.total = false;
+					this.score.switches.again = false;
 
 					// Generate floor.
 					this.floor = new snap.Floor();
@@ -900,64 +914,65 @@
 					if (snap.resultsScreen) {
 						ctx.fillStyle = 'rgba(0,0,0,.8)';
 						ctx.fillRect(0, 0, 640, 960);
-					}
-					if (snap.score.switches.score) {
-						// Score text.
-						snap.drawText({
-							font: '35px Arial',
-							fill: '#fff',
-							align: 'center',
-							x: 320,
-							y: 290,
-							text: 'Score: ' + this.val
-						});
-					}
-					if (snap.score.switches.flipBonus) {
-						// Score text.
-						snap.drawText({
-							align: 'center',
-							x: 320,
-							y: 350,
-							text: 'Flip bonus: ' + this.flipBonus
-						});
-					}
-					if (snap.score.switches.landing) {
-						// Score text.
-						snap.drawText({
-							align: 'center',
-							x: 320,
-							y: 410,
-							text: 'Landing: ' + this.landing
-						});
-					}
-					// Calculate the total score, taking into consideration
-					// any existing scores.
-					var total = function () {
-						var thisPrev = snap.score.prevScore,
-							thisNet = snap.score.val + snap.score.flipBonus
-								+ snap.score.landing,
-							thisGross = thisPrev + thisNet;
-						// Save the newly computed score into memory for the next game.
-						if (!snap.score.saved) {
-							snap.score.newScore += thisNet;
-							snap.score.saved = true;
+
+						if (snap.score.switches.score) {
+							// Score text.
+							snap.drawText({
+								font: '35px Arial',
+								fill: '#fff',
+								align: 'center',
+								x: 320,
+								y: 290,
+								text: 'Score: ' + this.val
+							});
 						}
-						// Set either 'Debt' or 'Profit' depending on +/- score.
-						if (thisGross > 0) {
-							return 'Profit: $' + thisGross;
-						} else {
-							return 'Debt: -$' + thisGross * -1;
+						if (snap.score.switches.flipBonus) {
+							// Score text.
+							snap.drawText({
+								align: 'center',
+								x: 320,
+								y: 350,
+								text: 'Flip bonus: ' + this.flipBonus
+							});
 						}
-					};
-					if (snap.score.switches.total) {
-						// Score text.
-						snap.drawText({
-							font: '70px Arial',
-							align: 'center',
-							x: 320,
-							y: 550,
-							text: total()
-						});
+						if (snap.score.switches.landing) {
+							// Score text.
+							snap.drawText({
+								align: 'center',
+								x: 320,
+								y: 410,
+								text: 'Landing: ' + this.landing
+							});
+						}
+						// Calculate the total score, taking into consideration
+						// any existing scores.
+						var total = function () {
+							var thisPrev = snap.score.prevScore,
+								thisNet = snap.score.val + snap.score.flipBonus
+									+ snap.score.landing,
+								thisGross = thisPrev + thisNet;
+							// Save the newly computed score into memory for the next game.
+							if (!snap.score.saved) {
+								snap.score.newScore += thisNet;
+								snap.score.saved = true;
+							}
+							// Set either 'Debt' or 'Profit' depending on +/- score.
+							if (thisGross > 0) {
+								return 'Profit: $' + thisGross;
+							} else {
+								return 'Debt: -$' + thisGross * -1;
+							}
+						};
+						if (snap.score.switches.total) {
+							// Score text.
+							snap.drawText({
+								font: '70px Arial',
+								align: 'center',
+								x: 320,
+								y: 550,
+								text: total()
+							});
+						}
 					}
 				}
 			};
