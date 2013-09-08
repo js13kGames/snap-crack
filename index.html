@@ -520,39 +520,8 @@
 							snap.init();
 						}, 1000 / fps);
 					} else {
-						this.endScreen = true;
 						this.endit(fps);
 						clearTimeout(snap.initLoop);
-
-						// Grey out the play area.
-						var results = setTimeout(function () {
-							snap.resultsScreen = true;
-							clearTimeout(results);
-						}, 1000);
-						// Set staggered display times for results sheet.
-						var scoreIn = setTimeout(function () {
-							snap.score.switches.score = true;
-							clearTimeout(scoreIn);
-						}, 2000);
-						var flipBonusIn = setTimeout(function () {
-							snap.score.switches.flipBonus = true;
-							clearTimeout(flipBonusIn);
-						}, 2300);
-						var landingIn = setTimeout(function () {
-							snap.score.switches.landing = true;
-							clearTimeout(landingIn);
-						}, 2600);
-						var totalIn = setTimeout(function () {
-							snap.score.switches.total = true;
-							clearTimeout(totalIn);
-						}, 2900);
-						var againIn = setTimeout(function () {
-							snap.score.switches.again = true;
-							clearTimeout(againIn);
-
-							// Set event listener to restart game.
-							window.addEventListener('keydown', snap.playAgain);
-						}, 3200);
 					}
 				},
 
@@ -571,6 +540,47 @@
 
 					// Draw the score.
 					this.score.draw();
+
+					// Grey out the play area.
+					if (!this.endScreen) {
+						if (this.player.splats.spleen.landed &&
+							this.player.splats.leftLeg.landed &&
+							this.player.splats.rightLeg.landed) {
+							this.endScreen = true;
+							results();
+						}
+
+						function results() {
+							var results = setTimeout(function () {
+								snap.resultsScreen = true;
+								clearTimeout(results);
+							}, 0);
+							// Set staggered display times for results sheet.
+							var scoreIn = setTimeout(function () {
+								snap.score.switches.score = true;
+								clearTimeout(scoreIn);
+							}, 1000);
+							var flipBonusIn = setTimeout(function () {
+								snap.score.switches.flipBonus = true;
+								clearTimeout(flipBonusIn);
+							}, 1300);
+							var landingIn = setTimeout(function () {
+								snap.score.switches.landing = true;
+								clearTimeout(landingIn);
+							}, 1600);
+							var totalIn = setTimeout(function () {
+								snap.score.switches.total = true;
+								clearTimeout(totalIn);
+							}, 1900);
+							var againIn = setTimeout(function () {
+								snap.score.switches.again = true;
+								clearTimeout(againIn);
+
+								// Set event listener to restart game.
+								window.addEventListener('keydown', snap.playAgain);
+							}, 2200);
+						}
+					}
 
 					this.enditLoop = setTimeout(function () {
 						snap.endit();
