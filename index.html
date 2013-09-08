@@ -798,7 +798,7 @@
 			};
 			snap.coins.draw = function () {
 				// Coin generation is based on RNG, game timer and last in-array coin.
-				if (this.length > 0 && this[this.length - 1].yPos <= 940) {
+				if (this.length > 0 && this[this.length - 1].yPos <= 920) {
 					this.generating = false;
 				}
 
@@ -831,7 +831,7 @@
 			snap.coins.generating = false;
 			snap.coins.generate = function () {
 				var pattern = function () {
-					return snap.randNum(0, 5);
+					return snap.randNum(0, 6);
 				};
 
 				switch (pattern()) {
