@@ -95,7 +95,6 @@
 				// Score.
 				Score: function () {
 					this.val = 0;
-					this.balance = 0;
 					this.flipBonus = 0;
 					this.landing = 0;
 
@@ -184,6 +183,24 @@
 							if (e.type === 'keyup') {
 								snap.player.moveRight = false;
 							}
+							break;
+					}
+				},
+
+				// Control for new continued game.
+				playAgain: function (e) {
+					switch (e.keyCode) {
+						// Space bar.
+						case 32:
+							// Set up game stage.
+							snap.setup();
+							snap.init(snap.fps);
+							clearTimeout(snap.enditLoop);
+							window.removeEventListener('keydown', snap.playAgain);
+
+							// Clear active scores.
+							snap.score.landing = 0;
+							snap.score.newScore = 0;
 							break;
 					}
 				},
@@ -280,6 +297,11 @@
 					this.floor = null;
 					this.timer = null;
 
+					// Transfer any saved scores.
+					if (this.score !== null) {
+						this.score.prevScore += this.score.newScore;
+					}
+
 					// Generate new player.
 					this.player = new snap.Brick();
 					// Populate player flip frames.
@@ -354,8 +376,10 @@
 					// Generate a timer.
 					this.timer = new snap.Timer();
 
-					// Generate a score object.
-					this.score = new snap.Score();
+					// Generate a score object if it doesn't already exist.
+					if (this.score === null) {
+						this.score = new snap.Score();
+					}
 
 					// Generate floor.
 					this.floor = new snap.Floor();
@@ -414,12 +438,13 @@
 							text: 'Hit space to spin and start!'
 						});
 
-						setTimeout(function () {
+						this.startitLoop = setTimeout(function () {
 							snap.startit();
 						}, 1000 / fps);
 					} else {
 						snap.timer.init();
 						this.init(fps);
+						clearTimeout(snap.startitLoop);
 					}
 				},
 
@@ -462,12 +487,13 @@
 						// Draw the score.
 						this.score.draw();
 
-						setTimeout(function () {
+						this.initLoop = setTimeout(function () {
 							snap.init();
 						}, 1000 / fps);
 					} else {
 						this.endScreen = true;
 						this.endit(fps);
+						clearTimeout(snap.initLoop);
 
 						// Grey out the play area.
 						var results = setTimeout(function () {
@@ -491,6 +517,13 @@
 							snap.score.switches.total = true;
 							clearTimeout(totalIn);
 						}, 2900);
+						var againIn = setTimeout(function () {
+							snap.score.switches.again = true;
+							clearTimeout(againIn);
+
+							// Set event listener to restart game.
+							window.addEventListener('keydown', snap.playAgain);
+						}, 3200);
 					}
 				},
 
@@ -510,7 +543,7 @@
 					// Draw the score.
 					this.score.draw();
 
-					setTimeout(function () {
+					this.enditLoop = setTimeout(function () {
 						snap.endit();
 					}, 1000 / fps);
 				}
@@ -841,9 +874,12 @@
 					ctx.fillStyle = 'rgba(0,0,0,.8)';
 					ctx.fillRect(20, 85, 195, 55);
 					// Balance text.
-					var balance = 'Debt:';
-					if (snap.score.balance > 0) {
+					var balance = 'Debt:',
+						amount = '$' + this.prevScore;
+					if (snap.score.prevScore > 0) {
 						balance = 'Profit:';
+					} else if (snap.score.prevScore < 0) {
+						amount = '-$' + (this.prevScore * -1);
 					}
 					snap.drawText({
 						fill: '#fff',
@@ -856,7 +892,7 @@
 						align: 'right',
 						x: 195,
 						y: 119,
-						text: '$' + this.balance
+						text: amount
 					});
 
 					// If the results screen timeout has fired, we bang in
