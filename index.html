@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>Lucky Break</title>
+		<title>Snap Crack</title>
 		<style>
 			#wrap {
 				width: 642px;
@@ -99,6 +99,20 @@
 					this.yPos = snap.player.getY();
 					this.yRate = snap.randNum(2, 3);
 
+					this.y = function () {
+						return this.yPos -= this.yRate;
+					};
+				},
+
+				// Particles.
+				Particle: function () {
+					this.size = snap.randNum(5, 15);
+					this.color = 'rgba(0, 0, 0, ' + (snap.randNum(1, 4) / 10) + ')';
+
+					this.x = snap.randNum(0, 640);
+
+					this.yPos = 960;
+					this.yRate = snap.randNum(2, 5);
 					this.y = function () {
 						return this.yPos -= this.yRate;
 					};
@@ -327,6 +341,7 @@
 				coins: [],
 				blood: [],
 				poot: [],
+				particles: [],
 
 				// Sound effects.
 				sfx: {
@@ -339,6 +354,16 @@
 						total: false
 					}
 				},
+
+				// The encouragement.
+				currentPhrase: null,
+				phrases: [
+					'You daredevil, you! Play again?',
+					'Fancy another dance with death?',
+					'Did someone say space bar?',
+					'Looks like that\'s the end of that...',
+					'Let\'s go again!'
+				],
 
 				// Game setup.
 				setup: function () {
@@ -369,6 +394,9 @@
 						this.score.saved = false;
 						this.score.prevScore += this.score.newScore;
 					}
+
+					// Generate a new phrase.
+					this.currentPhrase = snap.phrases[snap.randNum(0, (snap.phrases.length - 1))];
 
 					// Generate new player.
 					this.player = new snap.Brick();
@@ -470,10 +498,15 @@
 					// Tapping space bar will start the game.
 					if (this.startScreen) {
 
-						//this.player.splats.dieHead.draw();
 
 						// Draw clouds.
 						this.clouds.draw();
+
+						// Draw player.
+						this.player.draw();
+
+						// Draw particles.
+						this.particles.draw();
 
 						// Draw intro text.
 						this.drawText({
@@ -481,26 +514,26 @@
 							fill: 'rgba(0,0,0,.8)',
 							align: 'center',
 							x: 320,
-							y: 350,
-							text: 'Lucky Break'
+							y: 390,
+							text: 'Snap Crack'
 						});
 						this.drawText({
 							font: '22px Arial',
 							align: 'center',
 							x: 320,
-							y: 440,
+							y: 480,
 							text: 'Collect coins to offset your medical bills.'
 						});
 						this.drawText({
 							align: 'center',
 							x: 320,
-							y: 485,
+							y: 525,
 							text: 'Grab them mid-spin for a flip bonus.'
 						});
 						this.drawText({
 							align: 'center',
 							x: 320,
-							y: 530,
+							y: 570,
 							text: 'Land on your feet to mitigate fall damage!'
 						});
 						this.drawText({
@@ -508,7 +541,7 @@
 							fill: 'rgba(0,0,0,' + this.introBounce.get() + ')',
 							align: 'center',
 							x: 320,
-							y: 705,
+							y: 725,
 							text: 'Hit space to spin and start!'
 						});
 
@@ -555,6 +588,9 @@
 						// Draw the player.
 						this.player.draw();
 
+						// Draw particles.
+						this.particles.draw();
+
 						// Draw the altitude (timer).
 						this.timer.draw();
 
@@ -579,6 +615,9 @@
 
 					// Draw the player.
 					this.player.draw();
+
+					// Draw particles.
+					this.particles.draw();
 
 					// Draw the altitude (timer).
 					this.timer.draw();
@@ -999,6 +1038,42 @@
 				'ticks': {enumerable: false}
 			});
 
+			snap.Particle.prototype = {
+				constructor: snap.Particle
+			};
+			snap.particles.draw = function () {
+				this.make();
+
+				for (var particle in this) {
+					// Remove off-screen particles.
+					if (this[particle].y() < -20) {
+						this.splice(particle, 1);
+					}
+
+					if (this[particle]) {
+						ctx.fillStyle = this[particle].color;
+						ctx.fillRect(
+							(this[particle].x - this[particle].size/2), this[particle].yPos,
+							this[particle].size, this[particle].size);
+					}
+				}
+			}
+			snap.particles.make = function () {
+				// Dont make particles towards the end.
+				if (snap.time < 2500) {
+					return;
+				}
+
+				// If there are less than 8 active particles, make a new one.
+				if (this.length < 8) {
+					this.push(new snap.Particle());
+				}
+			}
+			Object.defineProperties(snap.particles, {
+				'draw': {enumerable: false},
+				'make': {enumerable: false}
+			});
+
 			snap.Timer.prototype = {
 				constructor: snap.Timer,
 				init: function () {
@@ -1047,6 +1122,10 @@
 				},
 				update: function (coin) {
 					if (snap.player.flipping) {
+						// Special coin bonus animation.
+						
+
+						// Apply flip bonus.
 						this.val += coin.val;
 						this.flipBonus += coin.val;
 					} else {
@@ -1184,7 +1263,7 @@
 								align: 'center',
 								x: 320,
 								y: 600,
-								text: 'Hit space to flirt with death again!'
+								text: snap.currentPhrase
 							});
 						}
 					}
