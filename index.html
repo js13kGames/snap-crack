@@ -797,8 +797,13 @@
 				constructor: snap.Coin,
 			};
 			snap.coins.draw = function () {
-				// Coin generation is based on RNG and game timer.
-				if (snap.randNum(0, 100) === 50 && snap.timer.get() > 1) {
+				// Coin generation is based on RNG, game timer and last in-array coin.
+				if (this.length > 0 && this[this.length - 1].yPos <= 940) {
+					this.generating = false;
+				}
+
+				if (!snap.coins.generating &&
+					(snap.randNum(0, 100) === 50 && snap.timer.get() > 1)) {
 					snap.coins.generate();
 				}
 
@@ -823,13 +828,15 @@
 					ctx.fillRect(coin.x, coin.y(), coin.width, coin.height);
 				}
 			};
+			snap.coins.generating = false;
 			snap.coins.generate = function () {
 				var pattern = function () {
-					return snap.randNum(0, 10);
+					return snap.randNum(0, 5);
 				};
 
 				switch (pattern()) {
 					case 1:
+						this.generating = true;
 						var numCoins = snap.randNum(5, 10);
 						var xPos = snap.randNum(70, 540);
 						for (var i = 0, y = 0; i < numCoins; i++) {
@@ -838,6 +845,7 @@
 						}
 						break;
 					case 2:
+						this.generating = true;
 						var numCoins = snap.randNum(3, 5);
 						var xPos = snap.randNum(70, 100);
 						for (var i = 0, y = 0; i < numCoins; i++) {
@@ -847,6 +855,7 @@
 						}
 						break;
 					case 3:
+						this.generating = true;
 						var numCoins = snap.randNum(3, 5);
 						var xPos = snap.randNum(510, 540);
 						for (var i = 0, y = 0; i < numCoins; i++) {
@@ -856,6 +865,7 @@
 						}
 						break;
 					case 4:
+						this.generating = true;
 						var numLines = snap.randNum(3, 5);
 						var numCoins = numLines * 13;
 						var xPos = 70;
@@ -904,6 +914,7 @@
 			snap.coins.xGap = 40;
 			Object.defineProperties(snap.coins, {
 				'draw': {enumerable: false},
+				'generating': {enumerable: false},
 				'generate': {enumerable: false},
 				'collisionCheck': {enumerable: false},
 				'color': {enumerable: false},
